@@ -14,7 +14,9 @@ using json = nlohmann::json;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
+
 double deg2rad(double x) { return x * pi() / 180; }
+
 double rad2deg(double x) { return x * 180 / pi(); }
 
 // Checks if the SocketIO event has JSON data.
@@ -32,14 +34,7 @@ string hasData(string s) {
   return "";
 }
 
-// Evaluate a polynomial.
-double polyeval(Eigen::VectorXd coeffs, double x) {
-  double result = 0.0;
-  for (int i = 0; i < coeffs.size(); i++) {
-    result += coeffs[i] * pow(x, i);
-  }
-  return result;
-}
+
 
 // Fit a polynomial.
 // Adapted from
@@ -63,6 +58,28 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   auto Q = A.householderQr();
   auto result = Q.solve(yvals);
   return result;
+}
+
+Eigen::MatrixXd coordinatesTransform(const vector<double> &ptsx, const vector<double> &ptsy, double x0, double y0,
+                                     double theta) {
+  const long N = ptsx.size();
+  const double cosT = cos(theta);
+  const double sinT = sin(theta);
+
+  Eigen::MatrixXd A(N, 2);
+
+  for(int i=0; i<N; i++){
+    const double x=ptsx[i]-x0;
+    const double y=ptsy[i]-y0;
+
+    const double xp= x*cosT+y*sinT;
+    const double yp=-x*sinT+y*cosT;
+
+    A(i, 0) = xp;
+    A(i, 1) = yp;
+  }
+
+  return A;
 }
 
 int main() {
@@ -92,24 +109,50 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          Eigen::MatrixXd A = coordinatesTransform(ptsx, ptsy, px, py, psi);
+
+          Eigen::VectorXd X = A.col(0);
+          Eigen::VectorXd Y = A.col(1);
+
+          // Let's use a polynomial of order three to fit curves
+          auto coeffs = polyfit(X, Y, 2);
+
+          // The cross track error is calculated by evaluating at polynomial at x, f(x)
+          // and subtracting y. Since we transformed the coordinates to local, we have x==y==0
+          double cte = coeffs[0];
+          // Due to the sign starting at 0, the orientation error is -f'(x).
+          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
+          double epsi = - atan(coeffs[1]);
+
+          Eigen::VectorXd state(6);
+          state << 0., 0., 0., v, cte, epsi;
+
+          const vector<double> vars = mpc.Solve(state, coeffs);
+          const size_t N = (vars.size()-2)/2;
+
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+          double steer_value = -vars[0];
+          double throttle_value = vars[1];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = steer_value/deg2rad(25.);
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
+          vector<double> mpc_x_vals(N);
+          vector<double> mpc_y_vals(N);
+
+          for(int i=0; i<N; i++) {
+            mpc_x_vals[i]=vars[2+i];
+            mpc_y_vals[i]=vars[2+N+i];
+          }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -118,8 +161,8 @@ int main() {
           msgJson["mpc_y"] = mpc_y_vals;
 
           //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
+          vector<double> next_x_vals (X.data(), X.data()+X.size());
+          vector<double> next_y_vals (Y.data(), Y.data()+Y.size());
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
