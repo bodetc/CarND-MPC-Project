@@ -1,23 +1,15 @@
-#include <math.h>
+
 #include <uWS/uWS.h>
-#include <chrono>
-#include <iostream>
 #include <thread>
-#include <vector>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+#include "common.h"
+#include "tools.h"
 
 // for convenience
 using json = nlohmann::json;
-
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-
-double deg2rad(double x) { return x * pi() / 180; }
-
-double rad2deg(double x) { return x * 180 / pi(); }
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -32,54 +24,6 @@ string hasData(string s) {
     return s.substr(b1, b2 - b1 + 2);
   }
   return "";
-}
-
-
-
-// Fit a polynomial.
-// Adapted from
-// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
-                        int order) {
-  assert(xvals.size() == yvals.size());
-  assert(order >= 1 && order <= xvals.size() - 1);
-  Eigen::MatrixXd A(xvals.size(), order + 1);
-
-  for (int i = 0; i < xvals.size(); i++) {
-    A(i, 0) = 1.0;
-  }
-
-  for (int j = 0; j < xvals.size(); j++) {
-    for (int i = 0; i < order; i++) {
-      A(j, i + 1) = A(j, i) * xvals(j);
-    }
-  }
-
-  auto Q = A.householderQr();
-  auto result = Q.solve(yvals);
-  return result;
-}
-
-Eigen::MatrixXd coordinatesTransform(const vector<double> &ptsx, const vector<double> &ptsy, double x0, double y0,
-                                     double theta) {
-  const long N = ptsx.size();
-  const double cosT = cos(theta);
-  const double sinT = sin(theta);
-
-  Eigen::MatrixXd A(N, 2);
-
-  for(int i=0; i<N; i++){
-    const double x=ptsx[i]-x0;
-    const double y=ptsy[i]-y0;
-
-    const double xp= x*cosT+y*sinT;
-    const double yp=-x*sinT+y*cosT;
-
-    A(i, 0) = xp;
-    A(i, 1) = yp;
-  }
-
-  return A;
 }
 
 int main() {
@@ -128,7 +72,6 @@ int main() {
           state << 0., 0., 0., v, cte, epsi;
 
           const vector<double> vars = mpc.Solve(state, coeffs);
-          const size_t N = (vars.size()-2)/2;
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -142,7 +85,7 @@ int main() {
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value/deg2rad(25.);
+          msgJson["steering_angle"] = steer_value/MAX_STEERING_RAD;
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
