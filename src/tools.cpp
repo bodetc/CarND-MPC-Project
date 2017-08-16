@@ -39,6 +39,16 @@ double polyeval(const Eigen::VectorXd& coeffs, double x) {
   return result;
 }
 
+// Evaluate a polynomial.
+double deriveval(const Eigen::VectorXd& coeffs, double x) {
+  double result = 0.0;
+  for (int i = 1; i < coeffs.size(); i++) {
+    result += i * coeffs[i] * pow(x, i-1);
+  }
+  return result;
+}
+
+
 AD<double> polyeval(const Eigen::VectorXd& coeffs, AD<double> x) {
   AD<double> result = 0.0;
   for (int i = 0; i < coeffs.size(); i++) {

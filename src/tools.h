@@ -15,7 +15,9 @@ Eigen::VectorXd polyfit(const Eigen::VectorXd& xvals, const Eigen::VectorXd& yva
 
 double polyeval(const Eigen::VectorXd& coeffs, double x);
 
-CppAD::AD<double> polyeval(const Eigen::VectorXd& coeffs, CppAD::AD<double> x0);
+double deriveval(const Eigen::VectorXd& coeffs, double x);
+
+CppAD::AD<double> polyeval(const Eigen::VectorXd& coeffs, CppAD::AD<double> x);
 
 CppAD::AD<double> deriveval(const Eigen::VectorXd& coeffs, CppAD::AD<double> x);
 

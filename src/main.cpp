@@ -53,11 +53,6 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          // Assume that the car will continue in a straigh line for the duration of the latency
-          //v *= MPH_2_MS;
-          px += v * cos(psi) * 0.1;
-          py += v * sin(psi) * 0.1;
-
           Eigen::MatrixXd A = coordinatesTransform(ptsx, ptsy, px, py, psi);
 
           Eigen::VectorXd X = A.col(0);
@@ -66,16 +61,20 @@ int main() {
           // Let's use a polynomial to fit the trajectory of waypoints
           auto coeffs = polyfit(X, Y, POLY_ORDER);
 
+          // Assume that the car will continue in a straigh line for the duration of the latency
+          px = v * 0.1;
+          py = 0.;
+          psi = 0.;
+
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
-          double cte = coeffs[0];
+          double cte = polyeval(coeffs, px);
           // Due to the sign starting at 0, the orientation error is -f'(x).
-          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
-          double epsi = - atan(coeffs[1]);
+          double epsi = - atan(deriveval(coeffs, px));
 
           Eigen::VectorXd state(6);
           // Since we transformed the coordinates to local, we have x==y==psi==0
-          state << 0., 0., 0., v, cte, epsi;
+          state << px, py, psi, v, cte, epsi;
 
           const vector<double> vars = mpc.Solve(state, coeffs);
 

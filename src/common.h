@@ -9,7 +9,8 @@
 #define MAX_STEERING_RAD 0.436332
 
 // Set the timestep length and duration
-const size_t N = 20;
+const size_t N = 10;
+
 // Duration of the timestep, chosen to be in the same order of magnitude as the latency
 const double dt = 0.1;
 
