@@ -18,7 +18,7 @@ const double dt = 0.1;
 const int POLY_ORDER = 3;
 
 // Reference speed
-const double ref_v =  30.;
+const double ref_v =  70.;
 
 // This value assumes the model presented in the classroom is used.
 //

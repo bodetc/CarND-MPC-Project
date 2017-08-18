@@ -39,14 +39,14 @@ The cost function was calculated by adding several individual costs with differe
 Those weights were chosen to provide a smooth and safe ride in the simulator.
 
 The following individual elements are minimized by the cost function:
-* Cross Track Error: `100.*CppAD::pow(vars[cte_start + t], 2)`
-* Orientation error: `10.*CppAD::pow(vars[epsi_start + t], 2)`
+* Cross Track Error: `2000.*CppAD::pow(vars[cte_start + t], 2)`
+* Orientation error: `2000.*CppAD::pow(vars[epsi_start + t], 2)`
 * Speed error: `CppAD::pow(vars[v_start + t] - ref_v, 2)`
-* Use of steering: `1000.*CppAD::pow(vars[delta_start + t], 2)`
-* Use of throttle: `CppAD::pow(vars[a_start + t], 2)`
+* Use of steering: `100.*CppAD::pow(vars[delta_start + t], 2)`
+* Use of throttle: `10.*CppAD::pow(vars[a_start + t], 2)`
 * Value gap between sequential actuations:
 `100.*CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2)`
-and `10.*CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2)`
+and `100.*CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2)`
 
 
 ### Timestep Length and Elapsed Duration (N & dt)
@@ -71,8 +71,4 @@ Afterwards, a polynomial fittting of order three was performed on the waypoints.
 ###Model Predictive Control with Latency
 *The student implements Model Predictive Control that handles a 100 millisecond latency. Student provides details on how they deal with latency.*
 
-The latency is taken into account by assuming that the car travels in a straight line for the duration of the latency.
-Since this is done in the reference frame of the car, this simply amounts to changing the x-position of the car as follows:
-`p_x=speed*latency`.
-
-While this is only a first order approximation of the movement of the car during latency, it seemed good enough for the purpose of the simulation.
+The latency is taken into account by using the update equations of the model (see above) for the duration of the latency.

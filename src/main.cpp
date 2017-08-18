@@ -61,19 +61,32 @@ int main() {
           // Let's use a polynomial to fit the trajectory of waypoints
           auto coeffs = polyfit(X, Y, POLY_ORDER);
 
-          // Assume that the car will continue in a straigh line for the duration of the latency
-          px = v * 0.1;
+          // Initial state for t=0 after the coordinates transformation
+          // (v doesn't change after a translation/rotation)
+          px = 0;
           py = 0.;
           psi = 0.;
-
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
           double cte = polyeval(coeffs, px);
           // Due to the sign starting at 0, the orientation error is -f'(x).
           double epsi = - atan(deriveval(coeffs, px));
 
+
+          // Get the current actuator values
+          const double latency = 0.1; // 100 ms
+          const double delta = -(double)(j[1]["steering_angle"]); // change of sign
+          const double a = j[1]["throttle"];
+
+          // Update of the state for t=latency
+          px += v*cos(psi)*latency;
+          py += v*sin(psi)*latency;
+          psi += v*delta*latency/Lf;
+          epsi += psi;
+          cte += v*sin(epsi)*latency;
+          v += a*latency;
+
           Eigen::VectorXd state(6);
-          // Since we transformed the coordinates to local, we have x==y==psi==0
           state << px, py, psi, v, cte, epsi;
 
           const vector<double> vars = mpc.Solve(state, coeffs);
